@@ -17,10 +17,11 @@ mongoose.connect(process.env.MONGODB_URI, {
 });
 
 cloudinary.config({
-  cloud_name: "dwj9xzw9z",
-  api_key: "384271746377171",
-  api_secret: "noaGg1QHGnuwfStkvXYPijjim34",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
 // import des routes
 const userRoutes = require("./routes/user");
 const offerRoutes = require("./routes/offer");
