@@ -1,29 +1,17 @@
-// Import du package 'express'
 const express = require("express");
-// Appel à la fonction Router(), issue du package 'express'
 const router = express.Router();
 
-// Import du package cloudinary
 const cloudinary = require("cloudinary").v2;
 
-// Import du model User et Offer
-// afin d'éviter des erreurs (notamment dues à d'eventuelles références entre les collections)
-// nous vous conseillons d'importer tous vos models dans toutes vos routes
 const User = require("../models/User");
 const Offer = require("../models/Offer");
 
-// Import du middleware isAuthenticated
 const isAuthenticated = require("../middleware/isAuthenticated");
 
-// Import des datas (ne pas en tenir compte, cela sert au reset de la BDD entre 2 sessions de formation)
 const products = require("../data/products.json");
-const goScrapp = require("../middleware/scrapping");
 
-// Route qui nous permet de récupérer une liste d'annonces, en fonction de filtres
-// Si aucun filtre n'est envoyé, cette route renverra l'ensemble des annonces
 router.get("/offers", async (req, res) => {
   try {
-    // création d'un objet dans lequel on va sotcker nos différents filtres
     let filters = {};
 
     if (req.query.title) {
@@ -69,10 +57,9 @@ router.get("/offers", async (req, res) => {
         select: "account",
       })
       .sort(sort)
-      .skip((page - 1) * limit) // ignorer les x résultats
-      .limit(limit); // renvoyer y résultats
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-    // cette ligne va nous retourner le nombre d'annonces trouvées en fonction des filtres
     const count = await Offer.countDocuments(filters);
 
     res.json({
@@ -85,7 +72,6 @@ router.get("/offers", async (req, res) => {
   }
 });
 
-// Route qui permmet de récupérer les informations d'une offre en fonction de son id
 router.get("/offer/:id", async (req, res) => {
   try {
     const offer = await Offer.findById(req.params.id).populate({
@@ -100,7 +86,6 @@ router.get("/offer/:id", async (req, res) => {
 });
 
 router.post("/offer/publish", isAuthenticated, async (req, res) => {
-  // route qui permet de poster une nouvelle annonce
   try {
     const { title, description, price, brand, size, condition, color, city } =
       req.fields;
@@ -108,7 +93,6 @@ router.post("/offer/publish", isAuthenticated, async (req, res) => {
     console.log(req.fields);
 
     if (title && price && req.files.picture.path) {
-      // Création de la nouvelle annonce (sans l'image)
       const newOffer = new Offer({
         product_name: title,
         product_description: description,
@@ -123,7 +107,6 @@ router.post("/offer/publish", isAuthenticated, async (req, res) => {
         owner: req.user,
       });
 
-      // Envoi de l'image à cloudinary
       const result = await cloudinary.uploader.unsigned_upload(
         req.files.picture.path,
         "vinted_upload",
@@ -134,7 +117,6 @@ router.post("/offer/publish", isAuthenticated, async (req, res) => {
         }
       );
 
-      // ajout de l'image dans newOffer
       newOffer.product_image = result;
 
       await newOffer.save();
@@ -193,7 +175,6 @@ router.put("/offer/update/:id", isAuthenticated, async (req, res) => {
       }
     }
 
-    // Notifie Mongoose que l'on a modifié le tableau product_details
     offerToModify.markModified("product_details");
 
     if (req.files.picture) {
@@ -214,11 +195,10 @@ router.put("/offer/update/:id", isAuthenticated, async (req, res) => {
 
 router.delete("/offer/delete/:id", isAuthenticated, async (req, res) => {
   try {
-    //Je supprime ce qui il y a dans le dossier
     await cloudinary.api.delete_resources_by_prefix(
       `api/vinted/offers/${req.params.id}`
     );
-    //Une fois le dossier vide, je peux le supprimer !
+
     await cloudinary.api.delete_folder(`api/vinted/offers/${req.params.id}`);
 
     offerToDelete = await Offer.findById(req.params.id);
@@ -232,21 +212,16 @@ router.delete("/offer/delete/:id", isAuthenticated, async (req, res) => {
   }
 });
 
-// CETTE ROUTE SERT AU RESET DE LA BDD ENTRE 2 SESSIONS DE FORMATION. CELA NE FAIT PAS PARTIE DE L'EXERCICE.
-// RESET ET INITIALISATION BDD
 router.get("/reset-offers", async (req, res) => {
   const allUserId = await User.find().select("_id");
-  // console.log(allUserId);
+
   if (allUserId.length === 0) {
     return res.send(
       "Il faut d'abord reset la BDD de users. Voir la route /reset-users"
     );
   } else {
-    // Vider la collection Offer
     await Offer.deleteMany({});
 
-    // Supprimer le dossier "api/vinted/offers" sur cloudinary
-    // Pour cela, il faut supprimer les images, cloudinary ne permettant pas de supprimer des dossiers qui ne sont pas vides
     try {
       const deleteResources = await cloudinary.api.delete_resources_by_prefix(
         "api/vinted/offers"
@@ -255,7 +230,6 @@ router.get("/reset-offers", async (req, res) => {
       console.log("deleteResources ===>  ", error.message);
     }
 
-    // Maintenant les dossiers vides, on peut les supprimer
     try {
       const deleteFolder = await cloudinary.api.delete_folder(
         "api/vinted/offers"
