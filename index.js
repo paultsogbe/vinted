@@ -25,17 +25,21 @@ cloudinary.config({
 // import des routes
 const userRoutes = require("./routes/user");
 const offerRoutes = require("./routes/offer");
+const paymentRoutes = require("./routes/payment");
 app.use(userRoutes);
 app.use(offerRoutes);
+app.use(paymentRoutes);
 
 app.get("/", (req, res) => {
-  res.status(200).json({ message: "Welcome to Vinted API by lereacteur !" });
+  res.status(200).json({ message: "Welcome to Vinted API by Paul !" });
 });
 
-app.all("*", (req, res) => {
-  res.status(404).json({ message: "Cette route n'existe pas" });
-});
+// app.all("*", (req, res) => {
+//   res.status(404).json({ message: "Cette route n'existe pas" });
+// });
 
 app.listen(process.env.PORT, () => {
   console.log("Server Started");
 });
+
+// server.timeout = Number(process.env.SERVER_TIMEOUT) || 1000000;
